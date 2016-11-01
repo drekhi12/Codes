@@ -14,8 +14,17 @@ void print(){
 		cout<<endl;
 	}
 }
-int min(int val){
+int minrow(int val){
 	int min=matrix[val][0];
+	for(int i=0;i<col;i++){
+		if(min>matrix[val][i]){
+			min=matrix[val][i];
+		}
+	}
+	return min;
+}
+int mincol(int val){
+	int min=matrix[0][val];
 	for(int i=0;i<col;i++){
 		if(min>matrix[val][i]){
 			min=matrix[val][i];
@@ -44,7 +53,14 @@ main()
 	//for row
 	int minimum;
 	for(int i=0;i<row;i++){
-		minimum=min(i);
+		minimum=minrow(i);
+		for(int j=0;j<col;j++){
+			matrix[i][j]-=minimum;
+		}
+	}
+	//for column
+	for(int i=0;i<row;i++){
+		minimum=mincol(i);
 		for(int j=0;j<col;j++){
 			matrix[i][j]-=minimum;
 		}
