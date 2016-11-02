@@ -1,3 +1,5 @@
+#include<stdio.h>
+#include<stdlib.h>
 main(){
 	char a[20];
 	int i,length=0;
