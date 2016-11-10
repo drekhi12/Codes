@@ -1,0 +1,223 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Visualizing PageRank Centrality</title>
+  <meta charset="utf-8" />
+</head>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+<style>
+  
+  svg {
+    background:#FCFCFC;
+    border: 1px black solid;
+  }
+  #annotation {
+    display: fixed;
+    top: 20px;
+    left: 20px;
+    font-size:16px;
+    font-weight:900;
+  }
+</style>
+<body onload="pagerankViz()">
+  <div id="annotation">X</div>
+  <div id="controls"></div>
+  <svg height="500" width="500"></svg>
+  <footer>
+<script>
+function pagerankViz() {
+  
+  speedVal = 200;
+  dampingFactor = .85;
+  maxPageRank = 0;
+  nodeAmount = 10;
+  currentPagingNodeID = 0;
+  model = {};
+  model.autoCount = 0;
+  pageRankColoration = d3.scale.linear().domain([0,1]).range(["black","#F5A9A9"])
+  pageRankSize = d3.scale.linear().domain([0,1]).range([2,12])
+  var f = d3.format(",.2f");
+  
+  ///GRAPH GENERATOR
+  nodesSeed = d3.range(nodeAmount);
+  numConnections = 2;
+  nodes = [];
+  edges = [];
+  for (x in nodesSeed) {
+    nodes.push({id: x, label: "node " + x, pageRank: 0})
+  }
+  
+  //This is just making a bunch of random edges 
+  var pass = Math.floor(Math.random() * 10) + 2;
+  var z = 0;
+  while (z < pass) {
+  for (x in nodes) {
+    var y = Math.floor(Math.random() * nodes.length);
+    var numEdges = y + 1;
+    while (y <= numEdges) {
+      if (y < nodes.length && y != x) {
+        edges.push({source: nodes[x], target: nodes[y], id:nodes[x].id + "-" + nodes[y].id})
+      }
+      y++;
+    }
+    }
+    z++;
+  }
+  d3.json("miserables.json", function(error, graph) {
+      model.nextStep = randomStart;
+      graph.nodes.forEach( function(node,i) {
+      node.id = i;
+      node.pageRank = 0;
+      })
+    graph.links.forEach( function(edge,i) {
+      edge.id = edge.source.id + "-" + edge.target.id;
+    })
+    var svg = d3.select("svg").on("click", function() {model.nextStep()})
+    nodes = graph.nodes;
+    edges = graph.links;
+    nodeAmount = graph.nodes.length;
+    force = d3.layout.force()
+      .charge(-500)
+      .linkDistance(20)
+      .size([500, 500])
+      .gravity(.5)
+      .on("tick", redrawGraph)
+      .nodes(nodes)
+      .links(edges)
+      
+      svg.append("g").attr("class", "linkG").selectAll("line.link").data(edges).enter().append("line")
+      .attr("id", function (d,i) {return "edge" + i})
+      .attr("class", "link")
+      .style("opacity", .5)
+      .style("stroke-width", "1px")
+      .style("stroke", "black")
+      
+      var nodeEnter = svg.append("g").attr("class", "nodeG").selectAll("g.node").data(nodes).enter().append("g")
+      .attr("id", function (d,i) {return "node" + i})
+      .attr("class", "node")
+      .call(force.drag());
+      nodeEnter.append("circle")
+      .style("stroke-width", "1px")
+      .style("stroke", "black")
+      .attr("r", 6)
+      .style("fill",function() {
+    return "hsl(" + Math.random() * 360 + ",100%,50%)";
+    })
+      
+      nodeEnter.append("text")
+      .style("text-anchor", "middle")
+      .style("font-size", "10px")
+      .attr("y", 4)
+      .text("")
+      
+      function redrawGraph() {
+        d3.selectAll("g.node")
+        .attr("transform", function (d) {return "translate(" + d.x + "," + d.y + ")"});
+        
+        d3.selectAll("line.link")
+        .attr("x1", function (d) {return d.source.x})
+        .attr("x2", function (d) {return d.target.x})
+        .attr("y1", function (d) {return d.source.y})
+        .attr("y2", function (d) {return d.target.y});
+        
+        
+        }
+        
+        force.start();
+      /// END GRAPH GENERATOR
+      
+      function randomStart() {
+        d3.select("#annotation").style("color", "green").html("start");
+        d3.selectAll("g.node").select("circle")
+      .style("stroke-width", "0")
+      .style("fill", "#F5A9A9");
+      d3.selectAll("line.link").style("stroke-width", "1px").style("stroke", "gray");
+      
+        currentPagingNodeID = Math.floor(Math.random() * nodeAmount);
+        d3.select("#node" + currentPagingNodeID).select("circle").style("fill", "green")
+        model.nextStep = stepTo;
+        increasePageRank();
+      }
+      
+      function stepTo() {
+        if (Math.random() > dampingFactor) {
+        d3.select("#annotation").style("color", "black").html("end");
+          model.nextStep = randomStart;
+          return;
+        }
+        d3.select("#annotation").style("color", "#F5A9A9").html("step");
+        //undirected network
+/*        var connectingEdges = edges.filter(function(d) {
+          return d.source.id == currentPagingNodeID || d.target.id == currentPagingNodeID
+        })
+*/
+        //directed network
+        var connectingEdges = edges.filter(function(d) {
+          return d.source.id == currentPagingNodeID;
+        })
+        
+        if (connectingEdges.length == 0) {
+          d3.select("#annotation").style("color", "black").html("end");
+          model.nextStep = randomStart;
+          return;
+        }
+        var randomEdge = Math.floor(Math.random() * connectingEdges.length);
+      d3.selectAll("line.link").filter(function(d) {return d == connectingEdges[randomEdge]}).transition().duration(speedVal).style("stroke-width", "4px").style("stroke", "red").each(function() {this.parentNode.appendChild(this)});
+        
+        currentPagingNodeID = connectingEdges[randomEdge].target.id == currentPagingNodeID ? connectingEdges[randomEdge].source.id : connectingEdges[randomEdge].target.id;
+        increasePageRank();
+      }
+      
+      function increasePageRank() {
+      d3.select("#node" + currentPagingNodeID).select("circle").style("stroke-width", "2px").each(function (d) {d.pageRank += 1});
+      maxPageRank = d3.max(nodes, function(d) {return d.pageRank});
+      totalPageRank = d3.sum(nodes, function(d) {return d.pageRank});
+      pageRankColoration.domain([0,maxPageRank]);
+      pageRankSize.domain([0,maxPageRank])
+      d3.selectAll("g.node").select("circle")
+      .transition().duration(speedVal)
+      .attr("r", function(d) {return pageRankSize(d.pageRank)})  
+      d3.selectAll("g.node").select("text")
+      //.style("fill", function(d) {return pageRankColoration(d.pageRank)})  
+      .text(function(d) {return d.pageRank / totalPageRank > 0.03 ? f(d.pageRank / totalPageRank) : ""})  
+      }
+      
+      function runOnce() {
+        speedVal = 1;
+        model.autoCount = 1;
+        startAuto();
+      }
+      function runHundred() {
+        speedVal = 200;
+        model.autoCount = 100;
+        startAuto();
+      }
+      
+        function runThousand() {
+        speedVal = 20;
+        model.autoCount = 1000;
+        startAuto();
+      }
+      function startAuto() {
+        if (model.autoCount > 0) {
+          setTimeout(autoRun,speedVal);
+          model.autoCount--;
+        }
+        else {
+          return;
+        }
+      }
+      
+      function autoRun() {
+        model.nextStep();
+        startAuto();
+      }
+      d3.select("#controls").append("button").html("run once").on("click", runOnce);
+      d3.select("#controls").append("button").html("run 100 times").on("click", runHundred);
+      d3.select("#controls").append("button").html("run 1000 times").on("click", runThousand);
+  })
+}
+</script>
+  </footer>
+</body>
+</html>
