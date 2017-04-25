@@ -1,23 +1,15 @@
-#include<string>
-#include<iostream>
+#include <cmath>
+#include <cstdio>
+#include <vector>
+#include <iostream>
+#include <algorithm>
 using namespace std;
-main()
-{
-	int flag=0;
-	string str;
-	cin>>str;
-	int len =str.size();
-	for(unsigned long long int i=0;i<len;i++){
-		cout<<str[i];
-	if(str[i]!='4'||str[i]!='0'){
-		cout<<"jhgjhgj";
-		flag=1;
-		break;
-	}
+
+
+int main() {
+    string s1,s2;
+ 	s1="hello";
+	cout<<s1[0]-'a';
+    return 0;
 }
 
-if(flag!=1)
-{
-	cout<<"yay"<<endl<<str;
-}
-}
